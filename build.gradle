@@ -5,7 +5,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.2.0-alpha2'
+        classpath 'com.android.tools.build:gradle:2.1.2'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -20,4 +20,31 @@ allprojects {
 
 task clean(type: Delete) {
     delete rootProject.buildDir
+}
+
+def copyBinFile = { File src,File dest->
+
+    def input = src.newDataInputStream()
+    def output = dest.newDataOutputStream()
+
+    output << input
+
+    input.close()
+    output.close()
+}
+
+project.ext.copyFileTo = {File source, File target ->
+    if (target.exists()) {
+        target.delete()
+    }
+
+    target.getParentFile().mkdirs()
+
+    copyBinFile source, target
+}
+
+if (!rootProject.ext.has("submodule"))
+    project.ext.submodule = ""
+else {
+    rootProject.ext.copyFileTo = project.ext.copyFileTo
 }
