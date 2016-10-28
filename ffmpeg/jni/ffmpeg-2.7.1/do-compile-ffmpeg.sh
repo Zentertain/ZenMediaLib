@@ -266,6 +266,9 @@ echo "\n--------------------"
 echo "[*] configurate ffmpeg"
 echo "--------------------"
 
+FF_CFG_FLAGS="$FF_CFG_FLAGS --extra-cflags=-I../x264/build/x264/android/include"
+FF_CFG_FLAGS="$FF_CFG_FLAGS --extra-ldflags=-L../x264/build/x264/android/lib"
+
 cd $FF_SOURCE
 #if [ -f "./config.h" ]; then
 #    echo 'reuse configure'
