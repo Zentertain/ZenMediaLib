@@ -194,7 +194,7 @@ Makefile.in
 
 #FFMPEG
 /jni/ffmpeg-2.7.1/*.version
-/jni/ffmpeg-2.7.1/config.h
+#/jni/ffmpeg-2.7.1/config.h
 /jni/ffmpeg-2.7.1/config.fate
 /jni/ffmpeg-2.7.1/config.mak
 
