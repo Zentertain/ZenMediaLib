@@ -1659,7 +1659,7 @@
 @c @set config-libdc1394-indev no
 @c @set config-a64-muxer no
 @c @set config-ac3-muxer no
-@c @set config-adts-muxer no
+@set config-adts-muxer yes
 @c @set config-adx-muxer no
 @c @set config-aiff-muxer no
 @c @set config-amr-muxer no
