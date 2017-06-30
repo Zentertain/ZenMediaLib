@@ -24,9 +24,10 @@ echo "===================="
 echo "[*] check env $1"
 echo "===================="
 set -e
-ANDROID_SDK=$ANDROID_HOME
+#ANDROID_SDK=$ANDROID_HOME
 ANDROID_NDK=$NDK
-if [ -z "$ANDROID_NDK" -o -z "$ANDROID_SDK" ]; then
+if [ -z "$ANDROID_NDK" ]; then
+#if [ -z "$ANDROID_NDK" -o -z "$ANDROID_SDK" ]; then
     echo "You must define ANDROID_NDK, ANDROID_SDK before starting."
     echo "They must point to your NDK and SDK directories.\n"
     exit 1
@@ -45,8 +46,8 @@ FF_NDK_REL=$(grep -o '^r[0-9]*.*' $ANDROID_NDK/RELEASE.TXT 2>/dev/null|cut -b2-)
 case "$FF_NDK_REL" in
     9*|10*)
         # we don't use 4.4.3 because it doesn't handle threads correctly.
-        if test -d ${ANDROID_NDK}/toolchains/arm-linux-androideabi-4.8
-        # if gcc 4.8 is present, it's there for all the archs (x86, mips, arm)
+        if test -d ${ANDROID_NDK}/toolchains/arm-linux-androideabi-4.9
+        # if gcc 4.9 is present, it's there for all the archs (x86, mips, arm)
         then
             echo "NDKr$FF_NDK_REL detected"
         else
@@ -56,13 +57,12 @@ case "$FF_NDK_REL" in
     ;;
     *)
         echo "You need the NDKr9 or later"
-        exit 1
     ;;
 esac
 
 FF_BUILD_ROOT=`pwd`
 FF_ANDROID_PLATFORM=android-16
-FF_GCC_VER=4.8
+FF_GCC_VER=4.9
 FF_GCC_64_VER=4.9
 
 
@@ -92,12 +92,13 @@ if [ "$FF_ARCH" = "armv7a" ]; then
     #echo "PKG_CONFIG_PATH:$PKG_CONFIG_PATH"
 
     FF_CFG_FLAGS="$FF_CFG_FLAGS --arch=arm"
+    FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-pic"
     FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-neon"
     FF_CFG_FLAGS="$FF_CFG_FLAGS --enable-thumb"
     
     FF_CFG_FLAGS="$FF_CFG_FLAGS --pkg-config=pkg-config"
 
-    FF_EXTRA_CFLAGS="$FF_EXTRA_CFLAGS -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp -mthumb"
+    FF_EXTRA_CFLAGS="$FF_EXTRA_CFLAGS -fpic -march=armv7-a -mfpu=vfpv3-d16 -mfloat-abi=softfp -mthumb"
     FF_EXTRA_LDFLAGS="$FF_EXTRA_LDFLAGS -Wl,--fix-cortex-a8"
 
     FF_ASM_OBJ_DIR="libavutil/arm/*.o libavcodec/arm/*.o libswresample/arm/*.o"
@@ -154,7 +155,7 @@ else
     exit 1
 fi
 
-FF_TOOLCHAIN_PATH=$NDK/toolchains/$FF_CROSS_PREFIX-4.8/prebuilt/darwin-x86_64
+FF_TOOLCHAIN_PATH=$NDK/toolchains/$FF_CROSS_PREFIX-4.9/prebuilt/darwin-x86_64
 
 FF_SYSROOT=$NDK/platforms/android-16/arch-arm
 FF_PREFIX=$FF_BUILD_ROOT/build/$FF_BUILD_NAME/output
@@ -214,7 +215,7 @@ FF_CFLAGS="-O3 -Wall -pipe \
     -Wno-psabi -Wa,--noexecstack \
     -DANDROID -DNDEBUG"
 
-# cause av_strlcpy crash with gcc4.7, gcc4.8
+# cause av_strlcpy crash with gcc4.7, gcc4.9
 # -fmodulo-sched -fmodulo-sched-allow-regmoves
 
 # --enable-thumb is OK
@@ -304,7 +305,6 @@ $CC -lm -lz -shared --sysroot=$FF_SYSROOT -Wl,--no-undefined -Wl,-z,noexecstack 
     libavfilter/*.o \
     libpostproc/*.o \
     ../x264/common/*.o \
-    ../x264/common/arm/*.o \
     ../x264/encoder/*.o \
     $FF_ASM_OBJ_DIR \
     $FF_DEP_LIBS \

@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 
 echo "---------- [AAC] Config ------------"
-sh ./configure_acc_android.sh
+sh ./configure_aac_android.sh
 
 echo "---------- [AAC] make ------------"
 make

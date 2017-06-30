@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CROSS_PREFIX=$NDK/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-
+CROSS_PREFIX=$NDK/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-
 PLATFORM=$NDK/platforms/android-9/arch-arm
 CPU=arm
 PREFIX=$PWD/build/android
@@ -10,7 +10,6 @@ OPTIMIZE_CFLAGS="-mfloat-abi=softfp -mfpu=vfpv3-d16 -marm -march=armv7-a -mthumb
     --with-sysroot=$PLATFORM \
     --host=arm-linux \
     --enable-static \
-    --with-pic=no \
     CC="${CROSS_PREFIX}gcc --sysroot=$PLATFORM" \
     CXX="${CROSS_PREFIX}g++ --sysroot=$PLATFORM" \
     RANLIB="${CROSS_PREFIX}ranlib" \
