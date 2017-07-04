@@ -272,7 +272,7 @@
 @c @set have-peeknamedpipe no
 @set have-posix-memalign yes
 @c @set have-pthread-cancel no
-@c @set have-sched-getaffinity no
+@set have-sched-getaffinity yes
 @c @set have-setconsoletextattribute no
 @c @set have-setmode no
 @set have-setrlimit yes

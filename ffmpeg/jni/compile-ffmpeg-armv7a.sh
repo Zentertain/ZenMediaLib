@@ -18,9 +18,9 @@ echo "----------- [FFMPEG] Build -----------"
 sh ./compile-ffmpeg.sh armv7a
 
 echo "----------- [FFMPEG] Copy output file libzenffmpeg.so to ffmpegapi project -----------"
-cp $FFMPEG_PATH/build/ffmpeg-armv7a/output/libzenffmpeg.so $JNI_ROOT_PATH/../../ffmpegapi/jni/ffmpeg/ffmpeg-armv7a/output
+cp $FFMPEG_PATH/build/ffmpeg-armv7a/output/libzenffmpeg.so $JNI_ROOT_PATH/../../../ZenCommonDroid/ffmpegapi/jni/ffmpeg/ffmpeg-armv7a/output
 
 echo "----------- [BUILD FFMPEGAPI -----]"
-cd $JNI_ROOT_PATH/../../ffmpegapi/
+cd $JNI_ROOT_PATH/../../../ZenCommonDroid/ffmpegapi/
 sh compile-arm-v7a.sh
 cd $JNI_ROOT_PATH/

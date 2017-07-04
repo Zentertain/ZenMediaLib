@@ -312,20 +312,20 @@ distcleancheck_listfiles = find . -type f -print
 ACLOCAL = ${SHELL} /Users/luofan/code/Zentertain/ZenMediaLib/ffmpeg/jni/fdk-aac/missing aclocal-1.14
 AMTAR = $${TAR-tar}
 AM_DEFAULT_VERBOSITY = 0
-AR = /Users/luofan/Library/android-ndk-r10d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-ar
+AR = /Users/luofan/Library/Android/android-ndk-r13b/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-ar
 AUTOCONF = ${SHELL} /Users/luofan/code/Zentertain/ZenMediaLib/ffmpeg/jni/fdk-aac/missing autoconf
 AUTOHEADER = ${SHELL} /Users/luofan/code/Zentertain/ZenMediaLib/ffmpeg/jni/fdk-aac/missing autoheader
 AUTOMAKE = ${SHELL} /Users/luofan/code/Zentertain/ZenMediaLib/ffmpeg/jni/fdk-aac/missing automake-1.14
 AWK = awk
-CC = /Users/luofan/Library/android-ndk-r10d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-gcc --sysroot=/Users/luofan/Library/android-ndk-r10d/platforms/android-9/arch-arm
+CC = /Users/luofan/Library/Android/android-ndk-r13b/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-gcc --sysroot=/Users/luofan/Library/Android/android-ndk-r13b/platforms/android-9/arch-arm
 CCDEPMODE = depmode=gcc3
-CFLAGS = -O3 -mfloat-abi=softfp -mfpu=vfpv3-d16 -marm -march=armv7-a -mthumb -D__thumb__ --sysroot=/Users/luofan/Library/android-ndk-r10d/platforms/android-9/arch-arm
-CPP = /Users/luofan/Library/android-ndk-r10d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-gcc --sysroot=/Users/luofan/Library/android-ndk-r10d/platforms/android-9/arch-arm -E
+CFLAGS = -O3 -mfloat-abi=softfp -mfpu=vfpv3-d16 -marm -march=armv7-a -mthumb -D__thumb__ --sysroot=/Users/luofan/Library/Android/android-ndk-r13b/platforms/android-9/arch-arm
+CPP = /Users/luofan/Library/Android/android-ndk-r13b/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-gcc --sysroot=/Users/luofan/Library/Android/android-ndk-r13b/platforms/android-9/arch-arm -E
 CPPFLAGS = 
-CXX = /Users/luofan/Library/android-ndk-r10d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-g++ --sysroot=/Users/luofan/Library/android-ndk-r10d/platforms/android-9/arch-arm
-CXXCPP = /Users/luofan/Library/android-ndk-r10d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-g++ --sysroot=/Users/luofan/Library/android-ndk-r10d/platforms/android-9/arch-arm -E
+CXX = /Users/luofan/Library/Android/android-ndk-r13b/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-g++ --sysroot=/Users/luofan/Library/Android/android-ndk-r13b/platforms/android-9/arch-arm
+CXXCPP = /Users/luofan/Library/Android/android-ndk-r13b/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-g++ --sysroot=/Users/luofan/Library/Android/android-ndk-r13b/platforms/android-9/arch-arm -E
 CXXDEPMODE = depmode=gcc3
-CXXFLAGS = -O3 -mfloat-abi=softfp -mfpu=vfpv3-d16 -marm -march=armv7-a -mthumb -D__thumb__ --sysroot=/Users/luofan/Library/android-ndk-r10d/platforms/android-9/arch-arm
+CXXFLAGS = -O3 -mfloat-abi=softfp -mfpu=vfpv3-d16 -marm -march=armv7-a -mthumb -D__thumb__ --sysroot=/Users/luofan/Library/Android/android-ndk-r13b/platforms/android-9/arch-arm
 CYGPATH_W = echo
 DEFS = -DPACKAGE_NAME=\"fdk-aac\" -DPACKAGE_TARNAME=\"fdk-aac\" -DPACKAGE_VERSION=\"0.1.3\" -DPACKAGE_STRING=\"fdk-aac\ 0.1.3\" -DPACKAGE_BUGREPORT=\"http://sourceforge.net/projects/opencore-amr/\" -DPACKAGE_URL=\"\" -DPACKAGE=\"fdk-aac\" -DVERSION=\"0.1.3\" -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1 -DLT_OBJDIR=\".libs/\" -DHAVE_LIBM=1
 DEPDIR = .deps
@@ -345,7 +345,7 @@ INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
-LD = /Users/luofan/Library/android-ndk-r10d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/arm-linux-androideabi/bin/ld
+LD = /Users/luofan/Library/Android/android-ndk-r13b/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/arm-linux-androideabi/bin/ld
 LDFLAGS = 
 LIBOBJS = 
 LIBS = -lm 
@@ -358,7 +358,7 @@ LTLIBOBJS =
 MAKEINFO = ${SHELL} /Users/luofan/code/Zentertain/ZenMediaLib/ffmpeg/jni/fdk-aac/missing makeinfo
 MANIFEST_TOOL = :
 MKDIR_P = ./install-sh -c -d
-NM = /Users/luofan/Library/android-ndk-r10d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-nm
+NM = /Users/luofan/Library/Android/android-ndk-r13b/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-nm
 NMEDIT = 
 OBJDUMP = false
 OBJEXT = o
@@ -372,11 +372,11 @@ PACKAGE_TARNAME = fdk-aac
 PACKAGE_URL = 
 PACKAGE_VERSION = 0.1.3
 PATH_SEPARATOR = :
-RANLIB = /Users/luofan/Library/android-ndk-r10d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-ranlib
+RANLIB = /Users/luofan/Library/Android/android-ndk-r13b/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-ranlib
 SED = /usr/bin/sed
 SET_MAKE = 
 SHELL = /bin/sh
-STRIP = /Users/luofan/Library/android-ndk-r10d/toolchains/arm-linux-androideabi-4.8/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip
+STRIP = /Users/luofan/Library/Android/android-ndk-r13b/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-strip
 VERSION = 0.1.3
 abs_builddir = /Users/luofan/code/Zentertain/ZenMediaLib/ffmpeg/jni/fdk-aac
 abs_srcdir = /Users/luofan/code/Zentertain/ZenMediaLib/ffmpeg/jni/fdk-aac
