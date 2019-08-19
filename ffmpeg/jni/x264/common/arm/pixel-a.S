@@ -1,9 +1,10 @@
 /*****************************************************************************
  * pixel.S: arm pixel metrics
  *****************************************************************************
- * Copyright (C) 2009-2015 x264 project
+ * Copyright (C) 2009-2019 x264 project
  *
  * Authors: David Conrad <lessen42@gmail.com>
+ *          Janne Grunau <janne-x264@jannau.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,9 +26,7 @@
 
 #include "asm.S"
 
-.section .rodata
-.align 4
-
+const mask_array, align=4
 .rept 16
         .byte 0xff
 .endr
@@ -35,16 +34,19 @@ mask_ff:
 .rept 16
         .byte 0
 .endr
+endconst
 
-mask_ac4:
+const mask_ac4, align=4
 .short 0, -1, -1, -1,  0, -1, -1, -1
-mask_ac8:
+endconst
+const mask_ac8, align=4
 .short 0, -1, -1, -1, -1, -1, -1, -1
+endconst
 
 .text
 
 .macro SAD4_ARMV6 h
-function x264_pixel_sad_4x\h\()_armv6
+function pixel_sad_4x\h\()_armv6
     push        {r4-r6,lr}
     ldr         r4, [r2], r3
     ldr         r5, [r0], r1
@@ -113,7 +115,7 @@ SAD4_ARMV6 8
 .endm
 
 .macro SAD_FUNC w, h, name, align:vararg
-function x264_pixel_sad\name\()_\w\()x\h\()_neon
+function pixel_sad\name\()_\w\()x\h\()_neon
     SAD_START_\w \align
 
 .if \w == 16
@@ -204,7 +206,7 @@ SAD_FUNC  16, 16, _aligned, ,:128
 .endm
 
 .macro SAD_FUNC_DUAL w, h
-function x264_pixel_sad_aligned_\w\()x\h\()_neon_dual
+function pixel_sad_aligned_\w\()x\h\()_neon_dual
     SAD_DUAL_START_\w
 .rept \h / 2 - \w / 8
     SAD_DUAL_\w
@@ -326,7 +328,7 @@ SAD_FUNC_DUAL  16, 16
 .endm
 
 .macro SAD_X_FUNC x, w, h
-function x264_pixel_sad_x\x\()_\w\()x\h\()_neon
+function pixel_sad_x\x\()_\w\()x\h\()_neon
     push        {r6-r7,lr}
 .if \x == 3
     ldrd        r6,  r7,  [sp, #12]
@@ -387,6 +389,59 @@ SAD_X_FUNC  4, 8,  8
 SAD_X_FUNC  4, 8,  16
 SAD_X_FUNC  4, 16, 8
 SAD_X_FUNC  4, 16, 16
+
+function pixel_vsad_neon
+    subs        r2,  r2,    #2
+    vld1.8     {q0}, [r0],  r1
+    vld1.8     {q1}, [r0],  r1
+    vabdl.u8    q2,  d0,    d2
+    vabdl.u8    q3,  d1,    d3
+    ble         2f
+1:
+    subs        r2,  r2,    #2
+    vld1.8     {q0}, [r0],  r1
+    vabal.u8    q2,  d2,    d0
+    vabal.u8    q3,  d3,    d1
+    vld1.8     {q1}, [r0],  r1
+    blt         2f
+    vabal.u8    q2,  d0,    d2
+    vabal.u8    q3,  d1,    d3
+    bgt         1b
+2:
+    vadd.u16    q0,  q2,    q3
+    HORIZ_ADD   d0,  d0,    d1
+    vmov.32     r0,  d0[0]
+    bx          lr
+endfunc
+
+function pixel_asd8_neon
+    ldr         r12, [sp,  #0]
+    sub         r12,  r12, #2
+    vld1.8     {d0}, [r0], r1
+    vld1.8     {d1}, [r2], r3
+    vld1.8     {d2}, [r0], r1
+    vld1.8     {d3}, [r2], r3
+    vsubl.u8    q8,   d0,  d1
+1:
+    subs        r12,  r12,  #2
+    vld1.8     {d4}, [r0], r1
+    vld1.8     {d5}, [r2], r3
+    vsubl.u8    q9,   d2,  d3
+    vsubl.u8    q10,  d4,  d5
+    vadd.s16    q8,   q9
+    vld1.8     {d2}, [r0], r1
+    vld1.8     {d3}, [r2], r3
+    vadd.s16    q8,   q10
+    bgt         1b
+    vsubl.u8    q9,   d2,  d3
+    vadd.s16    q8,   q9
+    vpaddl.s16  q8,   q8
+    vpadd.s32   d16,  d16, d17
+    vpadd.s32   d16,  d16, d17
+    vabs.s32    d16,  d16
+    vmov.32     r0,   d16[0]
+    bx          lr
+endfunc
 
 
 .macro SSD_START_4
@@ -468,7 +523,7 @@ SAD_X_FUNC  4, 16, 16
 .endm
 
 .macro SSD_FUNC w h
-function x264_pixel_ssd_\w\()x\h\()_neon
+function pixel_ssd_\w\()x\h\()_neon
     SSD_START_\w
 .rept \h-2
     SSD_\w
@@ -489,6 +544,79 @@ SSD_FUNC   8, 16
 SSD_FUNC  16, 8
 SSD_FUNC  16, 16
 
+function pixel_ssd_nv12_core_neon
+    push       {r4-r5}
+    ldrd        r4,  r5,  [sp, #8]
+    add         r12, r4,  #8
+    bic         r12, r12, #15
+    vmov.u64    q8,  #0
+    vmov.u64    q9,  #0
+    sub         r1,  r1,  r12, lsl #1
+    sub         r3,  r3,  r12, lsl #1
+1:
+    subs        r12, r4,  #16
+    vld2.8     {d0,d1},   [r0]!
+    vld2.8     {d2,d3},   [r2]!
+    vld2.8     {d4,d5},   [r0]!
+    vld2.8     {d6,d7},   [r2]!
+
+    vsubl.u8    q10, d0,  d2
+    vsubl.u8    q11, d1,  d3
+    vmull.s16   q14, d20, d20
+    vmull.s16   q15, d22, d22
+    vsubl.u8    q12, d4,  d6
+    vsubl.u8    q13, d5,  d7
+    vmlal.s16   q14, d21, d21
+    vmlal.s16   q15, d23, d23
+
+    blt         4f
+    beq         3f
+2:
+    vmlal.s16   q14, d24, d24
+    vmlal.s16   q15, d26, d26
+    vld2.8     {d0,d1},   [r0]!
+    vld2.8     {d2,d3},   [r2]!
+    vmlal.s16   q14, d25, d25
+    vmlal.s16   q15, d27, d27
+
+    subs        r12, r12, #16
+    vsubl.u8    q10, d0,  d2
+    vsubl.u8    q11, d1,  d3
+    vmlal.s16   q14, d20, d20
+    vmlal.s16   q15, d22, d22
+    vld2.8     {d4,d5},   [r0]!
+    vld2.8     {d6,d7},   [r2]!
+    vmlal.s16   q14, d21, d21
+    vmlal.s16   q15, d23, d23
+    blt         4f
+
+    vsubl.u8    q12, d4,  d6
+    vsubl.u8    q13, d5,  d7
+    bgt         2b
+3:
+    vmlal.s16   q14, d24, d24
+    vmlal.s16   q15, d26, d26
+    vmlal.s16   q14, d25, d25
+    vmlal.s16   q15, d27, d27
+4:
+    subs        r5,  r5,  #1
+    vaddw.s32   q8,  q8,  d28
+    vaddw.s32   q9,  q9,  d30
+    add         r0,  r0,  r1
+    add         r2,  r2,  r3
+    vaddw.s32   q8,  q8,  d29
+    vaddw.s32   q9,  q9,  d31
+    bgt         1b
+
+    vadd.u64    d16, d16, d17
+    vadd.u64    d18, d18, d19
+    ldrd        r4,  r5, [sp, #16]
+    vst1.64    {d16}, [r4]
+    vst1.64    {d18}, [r5]
+
+    pop        {r4-r5}
+    bx          lr
+endfunc
 
 .macro VAR_SQR_SUM qsqr_sum qsqr_last qsqr dsrc vpadal=vpadal.u16
     vmull.u8        \qsqr, \dsrc, \dsrc
@@ -496,7 +624,7 @@ SSD_FUNC  16, 16
     \vpadal         \qsqr_sum, \qsqr_last
 .endm
 
-function x264_pixel_var_8x8_neon
+function pixel_var_8x8_neon
     vld1.64         {d16}, [r0,:64], r1
     vmull.u8        q1,  d16, d16
     vmovl.u8        q0,  d16
@@ -517,10 +645,10 @@ function x264_pixel_var_8x8_neon
     VAR_SQR_SUM     q1,  q9,   q14, d24
     vld1.64         {d26}, [r0,:64], r1
     VAR_SQR_SUM     q2,  q10,  q15, d26
-    b               x264_var_end
+    b               var_end
 endfunc
 
-function x264_pixel_var_8x16_neon
+function pixel_var_8x16_neon
     vld1.64         {d16}, [r0,:64], r1
     vld1.64         {d18}, [r0,:64], r1
     vmull.u8        q1,  d16, d16
@@ -549,10 +677,10 @@ function x264_pixel_var_8x16_neon
     b               1b
 2:
     VAR_SQR_SUM     q2,  q13,  q15, d22
-    b               x264_var_end
+    b               var_end
 endfunc
 
-function x264_pixel_var_16x16_neon
+function pixel_var_16x16_neon
     vld1.64         {d16-d17}, [r0,:128], r1
     vmull.u8        q12, d16, d16
     vmovl.u8        q0,  d16
@@ -576,7 +704,7 @@ var16_loop:
     bgt             var16_loop
 endfunc
 
-function x264_var_end, export=0
+function var_end, export=0
     vpaddl.u16      q8,  q14
     vpaddl.u16      q9,  q15
     vadd.u32        q1,  q1,  q8
@@ -591,13 +719,24 @@ function x264_var_end, export=0
     bx              lr
 endfunc
 
-.macro DIFF_SUM diff da db lastdiff
-    vld1.64         {\da}, [r0,:64], r1
-    vld1.64         {\db}, [r2,:64], r3
-.ifnb \lastdiff
-    vadd.s16        q0,  q0,  \lastdiff
+.macro DIFF_SUM diff1 diff2 da1 db1 da2 db2 lastdiff1 lastdiff2 acc1 acc2
+    vld1.64         {\da1}, [r0,:64]!
+    vld1.64         {\db1}, [r1,:64], r3
+.ifnb \lastdiff1
+    vadd.s16        \acc1, \acc1, \lastdiff1
+    vadd.s16        \acc2, \acc2, \lastdiff2
 .endif
-    vsubl.u8        \diff, \da, \db
+    vld1.64         {\da2}, [r0,:64]!
+    vld1.64         {\db2}, [r1,:64], r3
+    vsubl.u8        \diff1, \da1, \db1
+    vsubl.u8        \diff2, \da2, \db2
+.endm
+
+.macro SQR_ACC_DOUBLE acc1 acc2 d0 d1 d2 d3 vmlal=vmlal.s16
+    \vmlal          \acc1, \d0, \d0
+    vmlal.s16       \acc1, \d1, \d1
+    \vmlal          \acc2, \d2, \d2
+    vmlal.s16       \acc2, \d3, \d3
 .endm
 
 .macro SQR_ACC acc d0 d1 vmlal=vmlal.s16
@@ -605,78 +744,90 @@ endfunc
     vmlal.s16       \acc, \d1, \d1
 .endm
 
-function x264_pixel_var2_8x8_neon
-    DIFF_SUM        q0,  d0,  d1
-    DIFF_SUM        q8,  d16, d17
-    SQR_ACC         q1,  d0,  d1,  vmull.s16
-    DIFF_SUM        q9,  d18, d19, q8
-    SQR_ACC         q2,  d16, d17, vmull.s16
+function pixel_var2_8x8_neon
+    mov             r3,  #16
+    DIFF_SUM        q0,  q10, d0,  d1,  d20, d21
+    DIFF_SUM        q8,  q11, d16, d17, d22, d23
+    SQR_ACC_DOUBLE  q1,  q13, d0,  d1,  d20, d21, vmull.s16
+    DIFF_SUM        q9,  q12, d18, d19, d24, d25, q8,  q11, q0,  q10
+    SQR_ACC_DOUBLE  q2,  q14, d16, d17, d22, d23, vmull.s16
 .rept 2
-    DIFF_SUM        q8,  d16, d17, q9
-    SQR_ACC         q1,  d18, d19
-    DIFF_SUM        q9,  d18, d19, q8
-    SQR_ACC         q2,  d16, d17
+    DIFF_SUM        q8,  q11, d16, d17, d22, d23, q9,  q12, q0,  q10
+    SQR_ACC_DOUBLE  q1,  q13, d18, d19, d24, d25
+    DIFF_SUM        q9,  q12, d18, d19, d24, d25, q8,  q11, q0,  q10
+    SQR_ACC_DOUBLE  q2,  q14, d16, d17, d22, d23
 .endr
-    DIFF_SUM        q8,  d16, d17, q9
-    SQR_ACC         q1,  d18, d19
+    DIFF_SUM        q8,  q11, d16, d17, d22, d23, q9,  q12, q0,  q10
+    SQR_ACC_DOUBLE  q1,  q13, d18, d19, d24, d25
     vadd.s16        q0,  q0,  q8
-    SQR_ACC         q2,  d16, d17
+    vadd.s16        q10, q10, q11
+    SQR_ACC_DOUBLE  q2,  q14, d16, d17, d22, d23
 
-    ldr             ip,  [sp]
     vadd.s16        d0,  d0,  d1
+    vadd.s16        d20, d20, d21
     vadd.s32        q1,  q1,  q2
+    vadd.s32        q13, q13, q14
     vpaddl.s16      d0,  d0
+    vpaddl.s16      d20, d20
     vadd.s32        d1,  d2,  d3
-    vpadd.s32       d0,  d0,  d1
+    vadd.s32        d26, d26, d27
+    vpadd.s32       d0,  d0,  d20 @ sum
+    vpadd.s32       d1,  d1,  d26 @ sqr
+    vmul.s32        d0,  d0,  d0  @ sum*sum
+    vshr.s32        d0,  d0,  #6
+    vsub.s32        d0,  d1,  d0
+    vpadd.s32       d0,  d0,  d0
 
     vmov            r0,  r1,  d0
-    vst1.32         {d0[1]}, [ip,:32]
-    mul             r0,  r0,  r0
-    sub             r0,  r1,  r0,  lsr #6
+    vst1.32         {d1}, [r2,:64]
     bx              lr
 endfunc
 
-function x264_pixel_var2_8x16_neon
-    vld1.64         {d16}, [r0,:64], r1
-    vld1.64         {d17}, [r2,:64], r3
-    vld1.64         {d18}, [r0,:64], r1
-    vld1.64         {d19}, [r2,:64], r3
+function pixel_var2_8x16_neon
+    mov             r3,  #16
+    vld1.64         {d16}, [r0,:64]!
+    vld1.64         {d17}, [r1,:64], r3
+    vld1.64         {d18}, [r0,:64]!
+    vld1.64         {d19}, [r1,:64], r3
+    vsubl.u8        q0,  d16, d17
+    vsubl.u8        q3,  d18, d19
+    SQR_ACC         q1,  d0,  d1,   vmull.s16
+    vld1.64         {d16}, [r0,:64]!
+    mov             ip,  #15
+    vld1.64         {d17}, [r1,:64], r3
+    SQR_ACC         q2,  d6,  d7,   vmull.s16
+1:  subs            ip,  ip,  #1
+    vld1.64         {d18}, [r0,:64]!
     vsubl.u8        q10, d16, d17
-    vsubl.u8        q11, d18, d19
-    SQR_ACC         q1,  d20, d21,  vmull.s16
-    vld1.64         {d16}, [r0,:64], r1
-    vadd.s16        q0,  q10, q11
-    vld1.64         {d17}, [r2,:64], r3
-    SQR_ACC         q2,  d22, d23,  vmull.s16
-    mov             ip,  #14
-1:  subs            ip,  ip,  #2
-    vld1.64         {d18}, [r0,:64], r1
-    vsubl.u8        q10, d16, d17
-    vld1.64         {d19}, [r2,:64], r3
+    vld1.64         {d19}, [r1,:64], r3
     vadd.s16        q0,  q0,  q10
     SQR_ACC         q1,  d20, d21
     vsubl.u8        q11, d18, d19
     beq             2f
-    vld1.64         {d16}, [r0,:64], r1
-    vadd.s16        q0,  q0,  q11
-    vld1.64         {d17}, [r2,:64], r3
+    vld1.64         {d16}, [r0,:64]!
+    vadd.s16        q3,  q3,  q11
+    vld1.64         {d17}, [r1,:64], r3
     SQR_ACC         q2,  d22, d23
     b               1b
 2:
-    vadd.s16        q0,  q0,  q11
+    vadd.s16        q3,  q3,  q11
     SQR_ACC         q2,  d22, d23
 
-    ldr             ip,  [sp]
     vadd.s16        d0,  d0,  d1
-    vadd.s32        q1,  q1,  q2
+    vadd.s16        d6,  d6,  d7
     vpaddl.s16      d0,  d0
-    vadd.s32        d1,  d2,  d3
-    vpadd.s32       d0,  d0,  d1
+    vpaddl.s16      d6,  d6
+    vadd.s32        d2,  d2,  d3
+    vadd.s32        d4,  d4,  d5
+    vpadd.s32       d0,  d0,  d6 @ sum
+    vpadd.s32       d2,  d2,  d4 @ sqr
+    vmul.s32        d0,  d0,  d0 @ sum*sum
+    vshr.s32        d0,  d0,  #7
+    vsub.s32        d0,  d2,  d0
+    vpadd.s32       d0,  d0,  d0
 
     vmov            r0,  r1,  d0
-    vst1.32         {d0[1]}, [ip,:32]
-    mul             r0,  r0,  r0
-    sub             r0,  r1,  r0,  lsr #7
+    vst1.32         {d2}, [r2,:64]
     bx              lr
 endfunc
 
@@ -695,7 +846,7 @@ endfunc
     vsubl.u8    \q3, d6,  d7
 .endm
 
-function x264_pixel_satd_4x4_neon
+function pixel_satd_4x4_neon
     vld1.32     {d1[]},  [r2], r3
     vld1.32     {d0[]},  [r0,:32], r1
     vld1.32     {d3[]},  [r2], r3
@@ -717,7 +868,7 @@ function x264_pixel_satd_4x4_neon
     bx          lr
 endfunc
 
-function x264_pixel_satd_4x8_neon
+function pixel_satd_4x8_neon
     vld1.32     {d1[]},  [r2], r3
     vld1.32     {d0[]},  [r0,:32], r1
     vld1.32     {d3[]},  [r2], r3
@@ -741,10 +892,10 @@ function x264_pixel_satd_4x8_neon
     vld1.32     {d6[1]}, [r0,:32], r1
     vsubl.u8    q3,  d6,  d7
     SUMSUB_AB   q10, q11, q2,  q3
-    b           x264_satd_4x8_8x4_end_neon
+    b           satd_4x8_8x4_end_neon
 endfunc
 
-function x264_pixel_satd_8x4_neon
+function pixel_satd_8x4_neon
     vld1.64     {d1}, [r2], r3
     vld1.64     {d0}, [r0,:64], r1
     vsubl.u8    q0,  d0,  d1
@@ -761,7 +912,7 @@ function x264_pixel_satd_8x4_neon
     SUMSUB_AB   q10, q11, q2,  q3
 endfunc
 
-function x264_satd_4x8_8x4_end_neon, export=0
+function satd_4x8_8x4_end_neon, export=0
     vadd.s16    q0,  q8,  q10
     vadd.s16    q1,  q9,  q11
     vsub.s16    q2,  q8,  q10
@@ -788,10 +939,10 @@ function x264_satd_4x8_8x4_end_neon, export=0
     bx          lr
 endfunc
 
-function x264_pixel_satd_8x8_neon
+function pixel_satd_8x8_neon
     mov         ip,  lr
 
-    bl x264_satd_8x8_neon
+    bl satd_8x8_neon
     vadd.u16    q0,  q12, q13
     vadd.u16    q1,  q14, q15
 
@@ -802,15 +953,15 @@ function x264_pixel_satd_8x8_neon
     bx          lr
 endfunc
 
-function x264_pixel_satd_8x16_neon
+function pixel_satd_8x16_neon
     vpush       {d8-d11}
     mov         ip,  lr
 
-    bl x264_satd_8x8_neon
+    bl satd_8x8_neon
     vadd.u16    q4,  q12, q13
     vadd.u16    q5,  q14, q15
 
-    bl x264_satd_8x8_neon
+    bl satd_8x8_neon
     vadd.u16    q4,  q4,  q12
     vadd.u16    q5,  q5,  q13
     vadd.u16    q4,  q4,  q14
@@ -824,7 +975,7 @@ function x264_pixel_satd_8x16_neon
     bx          lr
 endfunc
 
-function x264_satd_8x8_neon, export=0
+function satd_8x8_neon, export=0
     LOAD_DIFF_8x4 q8,  q9,  q10, q11
     vld1.64     {d7}, [r2], r3
     SUMSUB_AB   q0,  q1,  q8,  q9
@@ -845,7 +996,7 @@ function x264_satd_8x8_neon, export=0
 endfunc
 
 // one vertical hadamard pass and two horizontal
-function x264_satd_8x4v_8x8h_neon, export=0
+function satd_8x4v_8x8h_neon, export=0
     SUMSUB_ABCD q0, q1, q2, q3, q12, q13, q14, q15
     vtrn.16     q8,  q9
     SUMSUB_AB   q12, q14, q0,  q2
@@ -873,15 +1024,15 @@ function x264_satd_8x4v_8x8h_neon, export=0
     bx          lr
 endfunc
 
-function x264_pixel_satd_16x8_neon
+function pixel_satd_16x8_neon
     vpush       {d8-d11}
     mov         ip, lr
 
-    bl          x264_satd_16x4_neon
+    bl          satd_16x4_neon
     vadd.u16    q4,  q12, q13
     vadd.u16    q5,  q14, q15
 
-    bl          x264_satd_16x4_neon
+    bl          satd_16x4_neon
     vadd.u16    q4,  q4,  q12
     vadd.u16    q5,  q5,  q13
     vadd.u16    q4,  q4,  q14
@@ -895,27 +1046,27 @@ function x264_pixel_satd_16x8_neon
     bx          lr
 endfunc
 
-function x264_pixel_satd_16x16_neon
+function pixel_satd_16x16_neon
     vpush       {d8-d11}
     mov         ip, lr
 
-    bl          x264_satd_16x4_neon
+    bl          satd_16x4_neon
     vadd.u16    q4,  q12, q13
     vadd.u16    q5,  q14, q15
 
-    bl          x264_satd_16x4_neon
+    bl          satd_16x4_neon
     vadd.u16    q4,  q4,  q12
     vadd.u16    q5,  q5,  q13
     vadd.u16    q4,  q4,  q14
     vadd.u16    q5,  q5,  q15
 
-    bl          x264_satd_16x4_neon
+    bl          satd_16x4_neon
     vadd.u16    q4,  q4,  q12
     vadd.u16    q5,  q5,  q13
     vadd.u16    q4,  q4,  q14
     vadd.u16    q5,  q5,  q15
 
-    bl          x264_satd_16x4_neon
+    bl          satd_16x4_neon
     vadd.u16    q4,  q4,  q12
     vadd.u16    q5,  q5,  q13
     vadd.u16    q4,  q4,  q14
@@ -929,7 +1080,7 @@ function x264_pixel_satd_16x16_neon
     bx          lr
 endfunc
 
-function x264_satd_16x4_neon, export=0
+function satd_16x4_neon, export=0
     vld1.64     {d2-d3}, [r2], r3
     vld1.64     {d0-d1}, [r0,:128], r1
     vsubl.u8    q8,  d0,  d2
@@ -950,13 +1101,13 @@ function x264_satd_16x4_neon, export=0
     vsubl.u8    q15, d5,  d7
     SUMSUB_AB   q2,  q3,  q10, q11
     SUMSUB_ABCD q8,  q10, q9,  q11, q0,  q2,  q1,  q3
-    b           x264_satd_8x4v_8x8h_neon
+    b           satd_8x4v_8x8h_neon
 endfunc
 
 
-function x264_pixel_sa8d_8x8_neon
+function pixel_sa8d_8x8_neon
     mov             ip,  lr
-    bl              x264_sa8d_8x8_neon
+    bl              sa8d_8x8_neon
     vadd.u16        q0,  q8,  q9
     HORIZ_ADD       d0,  d0,  d1
     mov             lr,  ip
@@ -966,23 +1117,23 @@ function x264_pixel_sa8d_8x8_neon
     bx              lr
 endfunc
 
-function x264_pixel_sa8d_16x16_neon
+function pixel_sa8d_16x16_neon
     vpush           {d8-d11}
     mov             ip,  lr
-    bl              x264_sa8d_8x8_neon
+    bl              sa8d_8x8_neon
     vpaddl.u16      q4,  q8
     vpaddl.u16      q5,  q9
-    bl              x264_sa8d_8x8_neon
+    bl              sa8d_8x8_neon
     vpadal.u16      q4,  q8
     vpadal.u16      q5,  q9
     sub             r0,  r0,  r1,  lsl #4
     sub             r2,  r2,  r3,  lsl #4
     add             r0,  r0,  #8
     add             r2,  r2,  #8
-    bl              x264_sa8d_8x8_neon
+    bl              sa8d_8x8_neon
     vpadal.u16      q4,  q8
     vpadal.u16      q5,  q9
-    bl              x264_sa8d_8x8_neon
+    bl              sa8d_8x8_neon
     vpaddl.u16      q8,  q8
     vpaddl.u16      q9,  q9
     vadd.u32        q0,  q4,  q8
@@ -1003,7 +1154,35 @@ endfunc
     SUMSUB_ABCD \r1, \r3, \r2, \r4, \t1, \t3, \t2, \t4
 .endm
 
-function x264_sa8d_8x8_neon, export=0
+.macro integrated_satd dst, s0, s1, s2, s3
+    vmov            q0,  \s0
+    vmov            q1,  \s1
+    vmov            q2,  \s2
+    vmov            q3,  \s3
+
+    vtrn.16         q0,  q1
+    vtrn.16         q2,  q3
+
+    SUMSUB_AB       q6,  q7,  q0,  q1
+    SUMSUB_AB       q0,  q1,  q2,  q3
+
+    vtrn.32         q6,  q0
+    vtrn.32         q7,  q1
+
+    vabs.s16        q6,  q6
+    vabs.s16        q0,  q0
+    vabs.s16        q7,  q7
+    vabs.s16        q1,  q1
+
+    vmax.u16        q6,  q6,  q0
+    vmax.u16        q7,  q7,  q1
+
+    vadd.i16        q6,  q6,  q7
+    vpadal.u16      \dst,  q6
+.endm
+
+.macro sa8d_satd_8x8 satd=
+function sa8d_\satd\()8x8_neon, export=0
     LOAD_DIFF_8x4   q8,  q9,  q10, q11
     vld1.64         {d7}, [r2], r3
     SUMSUB_AB       q0,  q1,  q8,  q9
@@ -1023,6 +1202,12 @@ function x264_sa8d_8x8_neon, export=0
     vsubl.u8        q15, d0,  d1
 
     HADAMARD4_V     q12, q13, q14, q15,  q0,  q1,  q2,  q3
+
+.ifc \satd, satd_
+    integrated_satd q4,  q8,  q9,  q10, q11
+    integrated_satd q4,  q12, q13, q14, q15
+.endif
+
     SUMSUB_ABCD     q0,  q8,  q1,  q9,   q8,  q12, q9,  q13
     SUMSUB_AB       q2,  q10, q10, q14
     vtrn.16         q8,  q9
@@ -1058,12 +1243,44 @@ function x264_sa8d_8x8_neon, export=0
     vmax.s16        q11, q3,  q15
     vadd.i16        q8,  q8,  q9
     vadd.i16        q9,  q10, q11
+.ifc \satd, satd_
+    vpadal.u16      q5,  q8
+    vpadal.u16      q5,  q9
+.endif
     bx              lr
+endfunc
+.endm
+
+sa8d_satd_8x8
+sa8d_satd_8x8 satd_
+
+function pixel_sa8d_satd_16x16_neon
+    push            {lr}
+    vpush           {q4-q7}
+    vmov.u32        q4,  #0
+    vmov.u32        q5,  #0
+    bl              sa8d_satd_8x8_neon
+    bl              sa8d_satd_8x8_neon
+    sub             r0,  r0,  r1,  lsl #4
+    sub             r2,  r2,  r3,  lsl #4
+    add             r0,  r0,  #8
+    add             r2,  r2,  #8
+    bl              sa8d_satd_8x8_neon
+    bl              sa8d_satd_8x8_neon
+    vadd.u32        d1,  d10, d11
+    vadd.u32        d0,  d8,  d9
+    vpadd.u32       d1,  d1,  d1
+    vpadd.u32       d0,  d0,  d0
+    vrshr.u32       d1,  d1,  #1
+    vmov.32         r1,  d0[0]
+    vmov.32         r0,  d1[0]
+    vpop            {q4-q7}
+    pop             {pc}
 endfunc
 
 
 .macro HADAMARD_AC w h
-function x264_pixel_hadamard_ac_\w\()x\h\()_neon
+function pixel_hadamard_ac_\w\()x\h\()_neon
     vpush           {d8-d15}
     movrel          ip, mask_ac4
     vmov.i8         q4, #0
@@ -1072,18 +1289,18 @@ function x264_pixel_hadamard_ac_\w\()x\h\()_neon
     vmov.i8         q5, #0
 
     mov             ip,  lr
-    bl              x264_hadamard_ac_8x8_neon
+    bl              hadamard_ac_8x8_neon
 .if \h > 8
-    bl              x264_hadamard_ac_8x8_neon
+    bl              hadamard_ac_8x8_neon
 .endif
 .if \w > 8
     sub             r0,  r0,  r1,  lsl #3
     add             r0,  r0,  #8
-    bl              x264_hadamard_ac_8x8_neon
+    bl              hadamard_ac_8x8_neon
 .endif
 .if \w * \h == 256
     sub             r0,  r0,  r1,  lsl #4
-    bl              x264_hadamard_ac_8x8_neon
+    bl              hadamard_ac_8x8_neon
 .endif
 
     vadd.s32        d8,  d8,  d9
@@ -1104,7 +1321,7 @@ HADAMARD_AC 16, 8
 HADAMARD_AC 16, 16
 
 // q4: satd  q5: sa8d  q6: mask_ac4  q7: mask_ac8
-function x264_hadamard_ac_8x8_neon, export=0
+function hadamard_ac_8x8_neon, export=0
     vld1.64         {d2},  [r0,:64], r1
     vld1.64         {d3},  [r0,:64], r1
     vaddl.u8        q0,  d2,  d3
@@ -1218,7 +1435,7 @@ endfunc
     vmull.u8    \ssb, \db, \db
 .endm
 
-function x264_pixel_ssim_4x4x2_core_neon
+function pixel_ssim_4x4x2_core_neon
     ldr         ip, [sp]
     vld1.64     {d0}, [r0], r1
     vld1.64     {d2}, [r2], r3
@@ -1247,7 +1464,7 @@ function x264_pixel_ssim_4x4x2_core_neon
 endfunc
 
 // FIXME: see about doing 16x16 -> 32 bit multiplies for s1/s2
-function x264_pixel_ssim_end4_neon
+function pixel_ssim_end4_neon
     vld1.32     {d16-d19}, [r0,:128]!
     vld1.32     {d20-d23}, [r1,:128]!
     vadd.s32    q0,  q8,  q10

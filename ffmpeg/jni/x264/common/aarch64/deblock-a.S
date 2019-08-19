@@ -1,7 +1,7 @@
 /*****************************************************************************
  * deblock.S: aarch64 deblocking
  *****************************************************************************
- * Copyright (C) 2009-2015 x264 project
+ * Copyright (C) 2009-2019 x264 project
  *
  * Authors: Mans Rullgard <mans@mansr.com>
  *          Janne Grunau <janne-x264@jannau.net>
@@ -31,9 +31,9 @@
     ldr             w6,  [x4]
     ccmp            w3,  #0, #0, ne
     mov             v24.s[0], w6
-    and             w6,  w6,  w6,  lsl #16
+    and             w8,  w6,  w6,  lsl #16
     b.eq            1f
-    ands            w6,  w6,  w6,  lsl #8
+    ands            w8,  w8,  w8,  lsl #8
     b.ge            2f
 1:
     ret
@@ -108,7 +108,7 @@
     sqxtun2         v0.16b,  v24.8h
 .endm
 
-function x264_deblock_v_luma_neon, export=1
+function deblock_v_luma_neon, export=1
     h264_loop_filter_start
 
     ld1             {v0.16b},  [x0], x1
@@ -131,7 +131,7 @@ function x264_deblock_v_luma_neon, export=1
     ret
 endfunc
 
-function x264_deblock_h_luma_neon, export=1
+function deblock_h_luma_neon, export=1
     h264_loop_filter_start
 
     sub             x0,  x0,  #4
@@ -302,7 +302,7 @@ endfunc
     bit             v2.16b, v26.16b,  v18.16b  // q2'_2
 .endm
 
-function x264_deblock_v_luma_intra_neon, export=1
+function deblock_v_luma_intra_neon, export=1
     h264_loop_filter_start_intra
 
     ld1             {v0.16b},  [x0], x1 // q0
@@ -328,7 +328,7 @@ function x264_deblock_v_luma_intra_neon, export=1
     ret
 endfunc
 
-function x264_deblock_h_luma_intra_neon, export=1
+function deblock_h_luma_intra_neon, export=1
     h264_loop_filter_start_intra
 
     sub             x0,  x0,  #4
@@ -421,7 +421,7 @@ endfunc
     sqxtun2         v0.16b,  v23.8h
 .endm
 
-function x264_deblock_v_chroma_neon, export=1
+function deblock_v_chroma_neon, export=1
     h264_loop_filter_start
 
     sub             x0,  x0,  x1, lsl #1
@@ -439,7 +439,7 @@ function x264_deblock_v_chroma_neon, export=1
     ret
 endfunc
 
-function x264_deblock_h_chroma_neon, export=1
+function deblock_h_chroma_neon, export=1
     h264_loop_filter_start
 
     sub             x0,  x0,  #4
@@ -472,12 +472,13 @@ deblock_h_chroma:
     ret
 endfunc
 
-function x264_deblock_h_chroma_422_neon, export=1
+function deblock_h_chroma_422_neon, export=1
     add             x5,  x0,  x1
+    sub             x0,  x0,  #4
     add             x1,  x1,  x1
+    h264_loop_filter_start
     mov             x7,  x30
-    bl              X(x264_deblock_h_chroma_neon)
-    ldr             w6,  [x4]
+    bl              deblock_h_chroma
     mov             x30, x7
     sub             x0,  x5,  #4
     mov             v24.s[0], w6
@@ -515,7 +516,7 @@ endfunc
     sqxtun          v17.8b,  v22.8h
 .endm
 
-function x264_deblock_h_chroma_mbaff_neon, export=1
+function deblock_h_chroma_mbaff_neon, export=1
     h264_loop_filter_start
 
     sub             x4,  x0,  #4
@@ -538,7 +539,7 @@ function x264_deblock_h_chroma_mbaff_neon, export=1
     ret
 endfunc
 
-.macro h264_loop_filter_chroma_intra, width=16
+.macro h264_loop_filter_chroma_intra width=16
     uabd            v26.16b, v16.16b, v17.16b  // abs(p0 - q0)
     uabd            v27.16b, v18.16b, v16.16b  // abs(p1 - p0)
     uabd            v28.16b, v19.16b, v17.16b  // abs(q1 - q0)
@@ -574,7 +575,7 @@ endfunc
     bit             v17.16b, v25.16b, v26.16b
 .endm
 
-function x264_deblock_v_chroma_intra_neon, export=1
+function deblock_v_chroma_intra_neon, export=1
     h264_loop_filter_start_intra
 
     sub             x0,  x0,  x1, lsl #1
@@ -592,7 +593,7 @@ function x264_deblock_v_chroma_intra_neon, export=1
     ret
 endfunc
 
-function x264_deblock_h_chroma_intra_mbaff_neon, export=1
+function deblock_h_chroma_intra_mbaff_neon, export=1
     h264_loop_filter_start_intra
 
     sub             x4,  x0,  #4
@@ -604,7 +605,7 @@ function x264_deblock_h_chroma_intra_mbaff_neon, export=1
 
     transpose4x4.h  v18, v16, v17, v19, v26, v27, v28, v29
 
-    h264_loop_filter_chroma_intra, width=8
+    h264_loop_filter_chroma_intra width=8
 
     st2             {v16.h,v17.h}[0], [x0], x1
     st2             {v16.h,v17.h}[1], [x0], x1
@@ -614,7 +615,7 @@ function x264_deblock_h_chroma_intra_mbaff_neon, export=1
     ret
 endfunc
 
-function x264_deblock_h_chroma_intra_neon, export=1
+function deblock_h_chroma_intra_neon, export=1
     h264_loop_filter_start_intra
 
     sub             x4,  x0,  #4
@@ -644,7 +645,7 @@ function x264_deblock_h_chroma_intra_neon, export=1
     ret
 endfunc
 
-function x264_deblock_h_chroma_422_intra_neon, export=1
+function deblock_h_chroma_422_intra_neon, export=1
     h264_loop_filter_start_intra
 
     sub             x4,  x0,  #4
@@ -696,12 +697,12 @@ function x264_deblock_h_chroma_422_intra_neon, export=1
     ret
 endfunc
 
-//static void deblock_strength_c( uint8_t nnz[X264_SCAN8_SIZE],
-//                                int8_t ref[2][X264_SCAN8_LUMA_SIZE],
-//                                int16_t mv[2][X264_SCAN8_LUMA_SIZE][2],
-//                                uint8_t bs[2][8][4], int mvy_limit,
-//                                int bframe )
-function x264_deblock_strength_neon, export=1
+// void deblock_strength( uint8_t nnz[X264_SCAN8_SIZE],
+//                        int8_t ref[2][X264_SCAN8_LUMA_SIZE],
+//                        int16_t mv[2][X264_SCAN8_LUMA_SIZE][2],
+//                        uint8_t bs[2][8][4], int mvy_limit,
+//                        int bframe )
+function deblock_strength_neon, export=1
     movi        v4.16b, #0
     lsl         w4,  w4,  #8
     add         x3,  x3,  #32

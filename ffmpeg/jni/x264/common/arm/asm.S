@@ -1,7 +1,7 @@
 /*****************************************************************************
  * asm.S: arm utility macros
  *****************************************************************************
- * Copyright (C) 2008-2015 x264 project
+ * Copyright (C) 2008-2019 x264 project
  *
  * Authors: Mans Rullgard <mans@mansr.com>
  *          David Conrad <lessen42@gmail.com>
@@ -28,21 +28,31 @@
 
 .syntax unified
 
-#if   HAVE_NEON
-        .arch           armv7-a
-#elif HAVE_ARMV6T2
-        .arch           armv6t2
-#elif HAVE_ARMV6
-        .arch           armv6
+#ifdef __ELF__
+.arch armv7-a
+.fpu neon
 #endif
 
-.fpu neon
+#define GLUE(a, b) a ## b
+#define JOIN(a, b) GLUE(a, b)
 
 #ifdef PREFIX
-#   define EXTERN_ASM _
+#   define BASE _x264_
+#   define SYM_PREFIX _
 #else
-#   define EXTERN_ASM
+#   define BASE x264_
+#   define SYM_PREFIX
 #endif
+
+#ifdef BIT_DEPTH
+#   define EXTERN_ASM JOIN(JOIN(BASE, BIT_DEPTH), _)
+#else
+#   define EXTERN_ASM BASE
+#endif
+
+#define X(s) JOIN(EXTERN_ASM, s)
+#define X264(s) JOIN(BASE, s)
+#define EXT(s) JOIN(SYM_PREFIX, s)
 
 #ifdef __ELF__
 #   define ELF
@@ -50,10 +60,24 @@
 #   define ELF @
 #endif
 
+#ifdef __MACH__
+#   define MACH
+#   define NONMACH @
+#else
+#   define MACH @
+#   define NONMACH
+#endif
+
 #if HAVE_AS_FUNC
 #   define FUNC
 #else
 #   define FUNC @
+#endif
+
+#if SYS_LINUX
+#define HAVE_SECTION_DATA_REL_RO 1
+#else
+#define HAVE_SECTION_DATA_REL_RO 0
 #endif
 
 .macro require8, val=1
@@ -66,10 +90,15 @@ ELF     .eabi_attribute 25, \val
 
 .macro function name, export=1
     .macro endfunc
+.if \export
+ELF     .size   EXTERN_ASM\name, . - EXTERN_ASM\name
+.else
 ELF     .size   \name, . - \name
+.endif
 FUNC    .endfunc
         .purgem endfunc
     .endm
+        .text
         .align  2
 .if \export == 1
         .global EXTERN_ASM\name
@@ -85,12 +114,66 @@ FUNC    .func   \name
 .endif
 .endm
 
+.macro const name, align=2, relocate=0
+    .macro endconst
+ELF     .size   \name, . - \name
+        .purgem endconst
+    .endm
+.if HAVE_SECTION_DATA_REL_RO && \relocate
+        .section        .data.rel.ro
+.else
+NONMACH .section        .rodata
+MACH    .const_data
+.endif
+        .align          \align
+\name:
+.endm
+
 .macro movrel rd, val
-#if HAVE_ARMV6T2 && !defined(PIC)
+#if defined(PIC)
+        ldr             \rd,  1f
+        b               2f
+1:
+@ FIXME: thumb
+        .word           \val - (2f + 8)
+2:
+        add             \rd,  \rd,  pc
+#elif HAVE_ARMV6T2
         movw            \rd, #:lower16:\val
         movt            \rd, #:upper16:\val
 #else
         ldr             \rd, =\val
+#endif
+.endm
+
+.macro movrelx rd, val, got
+#if defined(PIC) && defined(__ELF__)
+        ldr             \got, 2f
+        ldr             \rd,  1f
+        b               3f
+1:
+@ FIXME: thumb
+        .word \val(GOT)
+2:
+        .word _GLOBAL_OFFSET_TABLE_ - (3f + 8)
+3:
+        add             \got, \got, pc
+        ldr             \rd, [\got, \rd]
+#elif defined(PIC) && defined(__APPLE__)
+        ldr             \rd,  1f
+        b               2f
+1:
+@ FIXME: thumb
+        .word           3f - (2f + 8)
+2:
+        ldr             \rd, [pc, \rd]
+        .non_lazy_symbol_pointer
+3:
+        .indirect_symbol \val
+        .word           0
+        .text
+#else
+        movrel          \rd, \val
 #endif
 .endm
 
@@ -104,10 +187,6 @@ FUNC    .func   \name
     ldr         \rd, =\val
 #endif
 .endm
-
-#define GLUE(a, b) a ## b
-#define JOIN(a, b) GLUE(a, b)
-#define X(s) JOIN(EXTERN_ASM, s)
 
 #define FENC_STRIDE 16
 #define FDEC_STRIDE 32
