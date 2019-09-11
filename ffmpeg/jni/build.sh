@@ -102,7 +102,7 @@ armv7a()
 {
 	if [ $BUILD -eq 1 ]
 	then
-		echo -ne '\nBUILDING '$TARGET'.neon...\n\n'
+		echo -ne '\nBUILDING '$TARGET'.armv7a...\n\n'
 		prepare
 		$MAKE NDK_DEBUG=0 \
 				  -j$CPU_CORE \
@@ -112,7 +112,7 @@ armv7a()
 				  -e APP_BUILD_SCRIPT=a-$TARGET.mk \
 				  -e ARCH=armv7-a \
 				  -e VFP=neon \
-				  -e NDK_APP_DST_DIR=libs/armeabi-v7a/neon \
+				  -e NDK_APP_DST_DIR=libs/armeabi-v7a \
 				  -e NAME=$TARGET \
 				  -e PROFILE=$PROFILE
 	fi
