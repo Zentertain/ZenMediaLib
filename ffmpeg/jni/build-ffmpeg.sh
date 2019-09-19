@@ -1,4 +1,4 @@
-#!/bin/bash
+ #!/bin/bash
 ROOT=$(cd "$(dirname "$0")"; pwd)
 source ${ROOT}/util.sh
 
@@ -90,6 +90,7 @@ export CC="$NDK/toolchains/llvm/prebuilt/$HOST_PLATFORM/bin/clang -target $CLANG
 export CXX="$NDK/toolchains/llvm/prebuilt/$HOST_PLATFORM/bin/clang++ -target $CLANG_TARGET"
 export RANLIB=${CROSS_PREFIX}ranlib
 export AR=${CROSS_PREFIX}ar
+export NDK_PROJECT_PATH=.
 
 #FFMPEG PROGRAMS
 FF_PROGRAM="  --disable-programs"
